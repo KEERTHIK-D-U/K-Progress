@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-ash-light: #F5F5F7;
+  --color-ash-dark: #2C2C2E;
+  --color-ash-accent: #8E8E93;
+}
+
+body {
+  background-color: var(--color-ash-light);
+  color: var(--color-ash-dark);
+}
+
+.bg-ash-gradient {
+    background: linear-gradient(135deg, #F5F5F7 0%, #FFFFFF 100%);
+}
+
+.text-ash-gradient {
+    background: linear-gradient(to right, #48484A, #1C1C1E);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
