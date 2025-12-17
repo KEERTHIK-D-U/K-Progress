@@ -8,7 +8,7 @@ interface ModernFormProps {
 
 const ModernAIForm: React.FC<ModernFormProps> = ({ onClose }) => {
   const { createTodo } = useTodo();
-  const totalSteps = 3;
+  const totalSteps = 4;
   const [step, setStep] = useState(1);
   
   const [formData, setFormData] = useState({
@@ -21,6 +21,37 @@ const ModernAIForm: React.FC<ModernFormProps> = ({ onClose }) => {
   });
 
   const [generating] = useState(false);
+  
+  /* AI Roadmap Generator (Heuristic for now) */
+  const generateRoadmap = () => {
+      const units = formData.durationUnit;
+      const val = Number(formData.durationValue);
+      const generatedMilestones = [];
+      
+      const count = units === 'days' ? Math.ceil(val / 7) : val; // Weekly if days, Monthly if months
+      const unitLabel = units === 'days' ? 'Week' : 'Month';
+      
+      const phases = [
+          "Foundation & Research",
+          "Core Implementation",
+          "Advanced Concepts",
+          "Practice & Refinement",
+          "Final Project & Mastery"
+      ];
+
+      for(let i=0; i<count; i++) {
+          // Cycle phases if long duration
+          const title = i < phases.length ? phases[i] : `Continued Progress (Phase ${i+1})`;
+          
+          generatedMilestones.push({
+              title: `${unitLabel} ${i+1}: ${title}`,
+              completed: false
+          });
+      }
+      return generatedMilestones;
+  };
+
+  const [milestones, setMilestones] = useState<{title: string, completed: boolean}[]>([]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -33,6 +64,11 @@ const ModernAIForm: React.FC<ModernFormProps> = ({ onClose }) => {
   };
 
   const handleNext = async () => {
+    if (step === 2) {
+        // Generate roadmap when moving from Step 2
+        const road = generateRoadmap();
+        setMilestones(road);
+    }
     setStep(prev => prev + 1);
   };
   
@@ -61,7 +97,7 @@ const ModernAIForm: React.FC<ModernFormProps> = ({ onClose }) => {
       reminderEnabled: formData.reminderEnabled,
       motivationalEnabled: formData.motivationalEnabled,
       priority: 'high',
-      milestones: [] // No AI milestones
+      milestones: milestones // Save AI milestones
     });
     onClose();
   };
@@ -162,8 +198,31 @@ const ModernAIForm: React.FC<ModernFormProps> = ({ onClose }) => {
              </div>
            )}
 
-            {/* Step 3: AI Preferences (Was Step 4) */}
+            {/* Step 3: AI Roadmap Review (NEW) */}
             {step === 3 && (
+                <div className="space-y-6 animate-fade-in">
+                    <div className="text-center mb-4">
+                        <Sparkles className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                        <h4 className="text-lg font-semibold text-gray-800">AI Generated Roadmap</h4>
+                        <p className="text-sm text-gray-500">Here is your plan to success.</p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-xl p-4 max-h-60 overflow-y-auto border border-gray-200">
+                        <ul className="space-y-3">
+                            {milestones.map((m, i) => (
+                                <li key={i} className="flex items-start gap-3 text-sm bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                                    <div className="bg-gray-800 text-white rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-xs mt-0.5">{i+1}</div>
+                                    <span className="text-gray-700 font-medium">{m.title}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <p className="text-xs text-center text-gray-400">You can adjust these later.</p>
+                </div>
+            )}
+
+            {/* Step 4: Tracking (Was Step 3) */}
+            {step === 4 && (
                <div className="space-y-6 animate-fade-in">
                   <div className="text-center mb-6">
                     <h4 className="text-lg font-semibold text-gray-800">Tracking Setup</h4>
@@ -210,7 +269,7 @@ const ModernAIForm: React.FC<ModernFormProps> = ({ onClose }) => {
                    className="flex items-center px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800"
                    disabled={false}
                  >
-                   {step === 2 ? 'Next' : 'Next'} { <ChevronRight className="ml-2 h-4 w-4" />}
+                   {step === 2 ? 'Review Plan' : 'Next'} { <ChevronRight className="ml-2 h-4 w-4" />}
                  </button>
               ) : (
                  <button

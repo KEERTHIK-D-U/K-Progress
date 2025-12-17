@@ -1,45 +1,8 @@
 import { useState } from 'react';
 import { useTodo, type Todo } from '../../context/TodoContext';
-import { CheckCircle, Circle, Trash2, Calendar, TrendingUp, BookOpen, Send } from 'lucide-react';
+import { CheckCircle, Circle, Trash2, Calendar } from 'lucide-react';
 
-const LogInput = ({ onLog }: { onLog: (text: string) => void }) => {
-    const [text, setText] = useState('');
-    const [expanded, setExpanded] = useState(false);
 
-    const handleSubmit = () => {
-        if (!text.trim()) return;
-        onLog(text);
-        setText('');
-        setExpanded(false);
-    };
-
-    if (!expanded) {
-        return (
-            <button onClick={() => setExpanded(true)} className="text-xs text-gray-400 hover:text-gray-600 flex items-center transition-colors">
-                <BookOpen size={12} className="mr-1" /> Log Daily Activity
-            </button>
-        );
-    }
-
-    return (
-        <div className="animate-fadeIn">
-            <textarea 
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="What did you accomplish today?"
-                className="w-full text-sm border border-gray-200 rounded-lg p-2 focus:ring-1 focus:ring-gray-800 focus:outline-none bg-gray-50 mb-2"
-                rows={2}
-                autoFocus
-            />
-            <div className="flex justify-end space-x-2">
-                <button onClick={() => setExpanded(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
-                <button onClick={handleSubmit} className="text-xs bg-gray-800 text-white px-3 py-1 rounded-md hover:bg-black flex items-center">
-                    <Send size={10} className="mr-1" /> Save
-                </button>
-            </div>
-        </div>
-    );
-};
 
 export const TodoCard = ({ todo }: { todo: Todo }) => {
   const { deleteTodo, updateProgress } = useTodo();
@@ -68,6 +31,20 @@ export const TodoCard = ({ todo }: { todo: Todo }) => {
           await archiveTodo(todo._id, learningText);
           setShowLearningModal(false);
       };
+      
+      const handleMilestoneToggle = async (index: number) => {
+          if (!todo.milestones) return;
+          
+          const newMilestones = [...todo.milestones];
+          newMilestones[index].completed = !newMilestones[index].completed;
+          
+          const completedCount = newMilestones.filter(m => m.completed).length;
+          const totalCount = newMilestones.length;
+          const newProgress = Math.round((completedCount / totalCount) * 100);
+          
+          await updateProgress(todo._id, newProgress, newMilestones);
+      };
+
 
      return (
         <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200 mb-6 relative overflow-visible group hover:shadow-md transition-shadow">
@@ -93,51 +70,40 @@ export const TodoCard = ({ todo }: { todo: Todo }) => {
              </div>
           </div>
           
-          <div className="mt-6">
-             <div className="mt-4">
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Log Activity</label>
-                <div className="flex gap-2">
-                    <input 
-                        type="text" 
-                        value={learningText}
-                        onChange={(e) => setLearningText(e.target.value)}
-                        placeholder="What did you work on today?"
-                        className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-1 focus:ring-gray-800 focus:outline-none bg-gray-50"
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                updateProgress(todo._id, undefined, undefined, learningText);
-                                setLearningText('');
-                            }
-                        }}
-                    />
-                    <button 
-                        onClick={() => {
-                            if (!learningText.trim()) return;
-                            updateProgress(todo._id, undefined, undefined, learningText);
-                            setLearningText('');
-                        }}
-                        className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-black transition-colors"
-                    >
-                        Commit
-                    </button>
-                </div>
-             </div>
-          </div>
-          
-          <div className="flex justify-between items-center mt-6 pt-6 border-t border-gray-50">
-             <div className="flex items-center text-sm text-gray-500">
-                <TrendingUp className="h-4 w-4 mr-2 text-gray-500" />
-                <span className="font-semibold text-gray-700 mr-1">{todo.streak} Day</span> Streak
-             </div>
-             <div className="text-sm text-gray-400">
-                {todo.targetDate && `Target: ${new Date(todo.targetDate).toLocaleDateString()}`}
-             </div>
-          </div>
-
-          {/* Daily Log Section */}
-          <div className="mt-6 pt-4 border-t border-gray-50">
-              <LogInput onLog={(text) => updateProgress(todo._id, undefined, undefined, text)} />
-          </div>
+          {/* AI Roadmap Display */}
+          {todo.milestones && todo.milestones.length > 0 && (
+              <div className="mt-6 border-t pt-6">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Your Roadmap</h4>
+                  <div className="space-y-3">
+                      {todo.milestones.map((milestone, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => handleMilestoneToggle(idx)}
+                            className={`flex items-start p-3 rounded-lg border transition-all cursor-pointer hover:border-gray-300 ${milestone.completed ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100'}`}
+                          >
+                              <div className={`mt-0.5 mr-3 flex-shrink-0 transition-colors ${milestone.completed ? 'text-green-600' : 'text-gray-300'}`}>
+                                  {milestone.completed ? (
+                                      <CheckCircle className="h-5 w-5 fill-green-50" />
+                                  ) : (
+                                      <Circle className="h-5 w-5" />
+                                  )}
+                              </div>
+                              <span className={`text-sm ${milestone.completed ? 'text-gray-400 line-through' : 'text-gray-700 font-medium'}`}>
+                                  {milestone.title}
+                              </span>
+                          </div>
+                      ))}
+                  </div>
+                  {/* Progress Bar */}
+                  <div className="mt-4 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gray-800 transition-all duration-500"
+                        style={{ width: `${todo.progress}%` }} 
+                      />
+                  </div>
+                  <div className="text-right text-xs text-gray-400 mt-1">{todo.progress}% Complete</div>
+              </div>
+          )}
 
           {/* Learning Modal Overlay */}
             {showLearningModal && (

@@ -1,38 +1,23 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
 import { TodoProvider } from './context/TodoContext';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
+import { ActivityProvider } from './context/ActivityContext';
 import Dashboard from './pages/Dashboard';
-
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <Navigate to="/login" />;
-  return <>{children}</>;
-};
+import NotificationManager from './components/NotificationManager';
 
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <TodoProvider>
+      <TodoProvider>
+        <ActivityProvider>
+          <NotificationManager />
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-             <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Navigate to="/" />} />
+            {/* Catch all redirect to home */}
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
-        </TodoProvider>
-      </AuthProvider>
+        </ActivityProvider>
+      </TodoProvider>
     </Router>
   );
 }

@@ -1,7 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
-import { useAuth } from './AuthContext';
 
+// Data types aligned with previous backend models
 interface Milestone {
   title: string;
   completed: boolean;
@@ -25,7 +24,11 @@ export interface Todo {
   milestones?: Milestone[];
   progress: number;
   streak: number;
-  status: 'pending' | 'in-progress' | 'completed' | 'paused';
+  status: 'pending' | 'in-progress' | 'completed' | 'paused' | 'archived';
+  createdAt: string;
+  lastUpdated?: string;
+  archivedAt?: string;
+  learning?: string;
 }
 
 interface TodoContextType {
@@ -40,21 +43,23 @@ interface TodoContextType {
 
 const TodoContext = createContext<TodoContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'ai_todo_tracker_data';
+
 export const TodoProvider = ({ children }: { children: React.ReactNode }) => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth(); // Needs token from user
 
+  // Load from local storage on mount
   const fetchTodos = async () => {
-    if (!user) return;
     try {
-      const config = {
-        headers: { Authorization: `Bearer ${user.token}` },
-      };
-      const { data } = await axios.get('http://localhost:5000/api/todos', config);
-      setTodos(data);
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setTodos(JSON.parse(stored));
+      } else {
+        setTodos([]);
+      }
     } catch (error) {
-      console.error("Error fetching todos", error);
+      console.error("Error loading todos from local storage", error);
     } finally {
       setLoading(false);
     }
@@ -62,66 +67,60 @@ export const TodoProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     fetchTodos();
-  }, [user]);
+  }, []);
+
+  // Helper to save to local storage
+  const saveToStorage = (newTodos: Todo[]) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newTodos));
+    setTodos(newTodos);
+  };
 
   const createTodo = async (todoData: any) => {
-    if (!user) return;
-    try {
-      const config = {
-        headers: { Authorization: `Bearer ${user.token}` },
-      };
-      const { data } = await axios.post('http://localhost:5000/api/todos', todoData, config);
-      setTodos((prev) => [data, ...prev]);
-    } catch (error) {
-      console.error("Error creating todo", error);
-      throw error;
-    }
+    // Generate a simple ID
+    const newTodo: Todo = {
+      ...todoData,
+      _id: Date.now().toString(), // Simple ID generation
+      progress: 0,
+      streak: 0,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      milestones: todoData.milestones || []
+    };
+
+    const updatedTodos = [newTodo, ...todos];
+    saveToStorage(updatedTodos);
   };
 
-  const updateProgress = async (id: string, progress?: number, milestones?: any[], logText?: string) => {
-    if (!user) return;
-    try {
-      const config = {
-        headers: { Authorization: `Bearer ${user.token}` },
-      };
-      const payload: any = {};
-      if (progress !== undefined) payload.progress = progress;
-      if (milestones) payload.milestones = milestones;
-      if (logText) payload.logText = logText;
-      
-      const { data } = await axios.put(`http://localhost:5000/api/todos/${id}/progress`, payload, config);
-      setTodos((prev) => prev.map((todo) => (todo._id === id ? data : todo)));
-    } catch (error) {
-      console.error("Error updating progress", error);
-    }
+  const updateProgress = async (id: string, progress?: number, milestones?: any[], _logText?: string) => {
+    const updatedTodos = todos.map(todo => {
+        if (todo._id !== id) return todo;
+
+        const updates: Partial<Todo> = { lastUpdated: new Date().toISOString() };
+        if (progress !== undefined) updates.progress = progress;
+        if (milestones) updates.milestones = milestones;
+        
+        // Auto-update status based on progress
+        if (progress === 100) {
+            updates.status = 'completed';
+        } else if (todo.status === 'pending') {
+            updates.status = 'in-progress';
+        }
+
+        return { ...todo, ...updates };
+    });
+    saveToStorage(updatedTodos);
   };
 
-  const archiveTodo = async (id: string, learning: string) => {
-    if (!user) return;
-    try {
-      const config = {
-        headers: { Authorization: `Bearer ${user.token}` },
-      };
-      await axios.post(`http://localhost:5000/api/todos/${id}/archive`, { learning }, config);
-      // Remove from local state
-      setTodos(prev => prev.filter(t => t._id !== id));
-    } catch (error) {
-      console.error("Archive failed", error);
-      throw error;
-    }
+  const archiveTodo = async (id: string, _learning: string) => {
+    // Currently just deleting archived todos to keep list clean, 
+    // or we could mark them as archived if we want to show them in a history view later.
+    const remainingTodos = todos.filter(t => t._id !== id);
+    saveToStorage(remainingTodos);
   };
   
   const deleteTodo = async (id: string) => {
-       if (!user) return;
-    try {
-      const config = {
-        headers: { Authorization: `Bearer ${user.token}` },
-      };
-      await axios.delete(`http://localhost:5000/api/todos/${id}`, config);
-      setTodos((prev) => prev.filter((todo) => todo._id !== id));
-    } catch (error) {
-      console.error("Error deleting todo", error);
-    }
+     const remainingTodos = todos.filter(t => t._id !== id);
+     saveToStorage(remainingTodos);
   };
 
   return (

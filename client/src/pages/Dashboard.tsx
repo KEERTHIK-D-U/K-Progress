@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useTodo } from '../context/TodoContext';
-import { useNavigate } from 'react-router-dom';
+import { useActivity } from '../context/ActivityContext';
 import TraditionalForm from '../components/TodoForm/TraditionalForm';
 import ModernAIForm from '../components/TodoForm/ModernAIForm';
 import { TodoCard } from '../components/Dashboard/TodoCard';
@@ -11,13 +9,13 @@ import ProfileModal from '../components/Dashboard/ProfileModal';
 import ActivityHeatmap from '../components/Dashboard/ActivityHeatmap';
 import CheckInModal from '../components/Dashboard/CheckInModal';
 import Footer from '../components/Layout/Footer';
-import { Download, Calendar as CalendarIcon, BrainCircuit, Settings } from 'lucide-react';
-import api from '../context/api';
+import { Calendar as CalendarIcon, BrainCircuit, Settings } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  // Mock User for display
+  const user = { name: 'User' }; 
   const { todos, loading } = useTodo();
-  const navigate = useNavigate();
+  const { activityData, addCommit, streak, totalCommits } = useActivity();
   
   const [viewMode, setViewMode] = useState<'selection' | 'dashboard'>('selection');
   const [activeTab, setActiveTab] = useState<'tasks' | 'analytics'>('tasks');
@@ -25,7 +23,8 @@ const Dashboard: React.FC = () => {
   const [showModernForm, setShowModernForm] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showCheckInModal, setShowCheckInModal] = useState(false);
-  const [stats, setStats] = useState<any>(null);
+  
+  const [commitMessage, setCommitMessage] = useState('');
 
   useEffect(() => {
     // Check for daily check-in
@@ -42,56 +41,22 @@ const Dashboard: React.FC = () => {
   const handleCheckInClose = () => {
       localStorage.setItem('lastCheckInDate', new Date().toDateString());
       setShowCheckInModal(false);
-      // Refresh stats if we updated things
-      if (activeTab === 'analytics') {
-          // trigger re-fetch logic if we extracted it, or just let next tab switch handle it
-      }
   };
 
-  useEffect(() => {
-    if (activeTab === 'analytics') {
-        const fetchStats = async () => {
-            try {
-                const res = await api.get('/todos/stats');
-                setStats(res.data);
-            } catch (error) {
-                console.error("Failed to fetch stats");
-            }
-        };
-        fetchStats();
-    }
-  }, [activeTab]);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleCommit = () => {
+      if (!commitMessage.trim()) return;
+      addCommit(commitMessage);
+      setCommitMessage('');
   };
 
-  const handleExport = async () => {
-    try {
-        const response = await api.get('/todos/export', { responseType: 'blob' });
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', 'todos_export.csv');
-        document.body.appendChild(link);
-        link.click();
-    } catch (error) {
-        console.error("Export failed", error);
-    }
-  };
+
 
   const traditionalTodos = todos.filter(t => t.type === 'traditional');
   const modernTodos = todos.filter(t => t.type === 'modern');
 
   if (viewMode === 'selection') {
-      return <SelectionScreen onSelect={(mode) => {
+      return <SelectionScreen onSelect={() => {
           setViewMode('dashboard');
-          if (mode === 'traditional') {
-             // Just go to dashboard, maybe highlight traditional section
-          } else {
-             // highlight modern
-          }
       }} />;
   }
 
@@ -126,11 +91,11 @@ const Dashboard: React.FC = () => {
                         {user?.name.charAt(0)}
                      </div>
                      <span className="text-gray-700 text-sm font-medium hidden sm:block">{user?.name}</span>
+                     {/* Settings could be local prefs */}
                      <button onClick={() => setShowProfileModal(true)} className="text-gray-400 hover:text-gray-700">
                         <Settings size={18} />
                      </button>
                   </div>
-                  <button onClick={handleLogout} className="text-gray-500 hover:text-red-500 text-sm">Logout</button>
                </div>
             </div>
          </div>
@@ -165,7 +130,7 @@ const Dashboard: React.FC = () => {
                 )}
             </div>
 
-            {/* AI Section */}
+            {/* AI Section (Manual now) */}
             <div className="space-y-4" id="modern-goals-section">
                 <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center space-x-2">
@@ -182,10 +147,10 @@ const Dashboard: React.FC = () => {
                     {modernTodos.length === 0 && (
                         <div className="bg-gradient-to-br from-gray-100 to-gray-50 border border-gray-200 rounded-xl p-8 text-center relative overflow-hidden group hover:shadow-md transition-all">
                             <div className="relative z-10">
-                                <h3 className="text-gray-900 font-bold mb-2">Start your AI Journey</h3>
-                                <p className="text-gray-600 text-sm mb-4">Let AI create a roadmap for your success.</p>
+                                <h3 className="text-gray-900 font-bold mb-2">Start your Journey</h3>
+                                <p className="text-gray-600 text-sm mb-4">Create a roadmap for your success.</p>
                                 <button onClick={() => setShowModernForm(true)} className="bg-white text-gray-900 px-4 py-2 rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all border border-gray-200">
-                                Try AI Planner
+                                Try Planner
                                 </button>
                             </div>
                         </div>
@@ -196,45 +161,53 @@ const Dashboard: React.FC = () => {
             </div>
             </div>
         ) : (
-            /* Analytics Tab */
+            /* Analytics Tab - Github Style */
             <div className="space-y-8 animate-fadeIn">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-800">Progress Analytics</h2>
-                    <button onClick={handleExport} className="flex items-center space-x-2 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors">
-                        <Download size={18} />
-                        <span className="font-medium">Export CSV</span>
-                    </button>
-                </div>
+                <div className="flex flex-col items-center justify-center space-y-6">
+                    <div className="w-full max-w-4xl">
+                        <ActivityHeatmap data={activityData as any} />
+                    </div>
 
-                {!stats ? <div>Loading stats...</div> : (
-                    <>
-                        {/* Key Metrics */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                <p className="text-gray-500 text-sm mb-1">Consistency Score</p>
-                                <div className="flex items-end space-x-2">
-                                    <span className="text-3xl font-bold text-gray-800">{stats.consistency}</span>
-                                    <span className="text-gray-400 text-sm mb-1">/ 100</span>
+                    {/* Commit Section */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 w-full max-w-lg">
+                        <div className="flex justify-between items-center mb-6">
+                             <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                <div className="w-3 h-3 bg-[#40c463] rounded-sm"></div> Log Activity
+                            </h3>
+                            <div className="flex gap-4 text-sm">
+                                <div className="text-center">
+                                    <span className="block font-bold text-gray-900 text-lg">{streak}</span>
+                                    <span className="text-gray-500 text-xs uppercase tracking-wider">Day Streak</span>
+                                </div>
+                                <div className="text-center">
+                                    <span className="block font-bold text-gray-900 text-lg">{totalCommits}</span>
+                                    <span className="text-gray-500 text-xs uppercase tracking-wider">Total Commits</span>
                                 </div>
                             </div>
-                            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                <p className="text-gray-500 text-sm mb-1">Completed Goals</p>
-                                <span className="text-3xl font-bold text-gray-800">{stats.completed}</span>
-                            </div>
-                             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                <p className="text-gray-500 text-sm mb-1">Pending Milestones</p>
-                                <span className="text-3xl font-bold text-gray-600">{stats.pending}</span>
-                            </div>
                         </div>
 
-                        {/* Heatmap */}
-                        <div className="animate-slideUp">
-                            <ActivityHeatmap data={stats.heatmapData || []} />
+                        <div className="flex gap-2">
+                            <input 
+                                type="text" 
+                                value={commitMessage}
+                                onChange={(e) => setCommitMessage(e.target.value)}
+                                placeholder="What did you achieve today?"
+                                className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-sm"
+                                onKeyDown={(e) => e.key === 'Enter' && handleCommit()}
+                            />
+                            <button 
+                                onClick={handleCommit}
+                                disabled={!commitMessage.trim()}
+                                className="bg-[#2da44e] text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#2c974b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Commit
+                            </button>
                         </div>
-
-                        {/* Charts Removed as per request */}
-                    </>
-                )}
+                        <p className="text-xs text-gray-400 mt-2">
+                            Commits turn the heatmap green. darker green = more activity.
+                        </p>
+                    </div>
+                </div>
             </div>
         )}
       </div>
