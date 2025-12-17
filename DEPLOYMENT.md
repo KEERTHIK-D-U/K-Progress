@@ -25,30 +25,44 @@ You must configure the following environment variables in your Vercel Project Se
 | :--- | :--- |
 | `VITE_API_URL` | URL of your deployed backend. On Vercel, this is usually just `/api` since client and server are on the same domain. **Set this to `/api`**. |
 
-## How to Deploy
+## How to Deploy (Vercel Web Application)
 
-### Option 1: Vercel CLI
-1.  Open your terminal at the project root (`ai-todo-tracker`).
-2.  Run `vercel login` if you haven't already.
-3.  Run `vercel`.
-4.  Follow the prompts:
-    - **Set up and deploy?** [Y/n] `Y`
-    - **Which scope?** [Select your account]
-    - **Link to existing project?** [N/y] `N`
-    - **Project Name?** [ai-todo-tracker]
-    - **In which directory is your code located?** `./` (Press Enter)
-    - **Want to modify these settings?** [N/y] `N`
-5.  After deployment, go to the Vercel Dashboard for your new project.
-6.  Navigate to **Settings > Environment Variables** and add the variables listed above.
-7.  Redeploy by running `vercel --prod` locally or triggering a deployment in the dashboard.
+Since you have pushed your code to GitHub, you will use the Vercel Dashboard to import and deploy.
 
-### Option 2: Git Integration (GitHub/GitLab/Bitbucket)
-1.  Push your code to a Git repository.
-2.  Import the repository in Vercel.
-3.  Vercel will detect the framework as "Vite".
-4.  Adding Environment Variables:
-    - During import, you can expand the "Environment Variables" section and add them.
-    - Or add them later in Project Settings and redeploy.
+### Step 1: Import Project
+1.  Log in to your [Vercel Dashboard](https://vercel.com/dashboard).
+2.  Click **"Add New..."** and select **"Project"**.
+3.  In the "Import Git Repository" list, find your repo `ai-todo-tracker` and click **Import**.
+
+### Step 2: Configure Project
+Vercel will show the "Configure Project" screen.
+1.  **Project Name**: Leave as is or change it.
+2.  **Framework Preset**: It should auto-detect **Vite**. If not, select **Vite**.
+3.  **Root Directory**: Leave it as `./` (the default).
+4.  **Build and Output Settings**:
+    - The `vercel.json` file in your project already handles the build commands.
+    - **Crucial**: You usually **do not** need to override these settings because of `vercel.json`.
+    - *Verification*: Ensure the build command looks like `cd client && npm install && npm run build` (or relies on the default). The Output Directory should be `client/dist`.
+
+### Step 3: Environment Variables (Required)
+Expand the **Environment Variables** section. You **MUST** add the following variables one by one.
+
+**Server Keys:**
+- `MONGO_URI`: Your MongoDB connection string.
+- `JWT_SECRET`: A secure random string.
+- `GEMINI_API_KEY`: Your Google Gemini API key.
+- `EMAIL_USER`: Your email for notifications.
+- `EMAIL_PASS`: Your email password/app password.
+
+**Client Keys:**
+- `VITE_API_URL`: Set this value to exactly `/api` (This ensures the frontend talks to the backend function correctly).
+
+### Step 4: Deploy
+1.  Click **Deploy**.
+2.  Wait for the build to complete.
+    - Vercel will install dependencies for both client and server (defined in root `package.json`).
+    - It will run the build script.
+3.  Once finished, you will see a success screen with your new domain.
 
 ## Troubleshooting
 
