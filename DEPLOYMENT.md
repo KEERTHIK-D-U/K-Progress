@@ -2,10 +2,6 @@
 
 This application is configured for deployment on Vercel as a monorepo.
 
-## Prerequisites
-
-- [Vercel Account](https://vercel.com/)
-- [Vercel CLI](https://vercel.com/docs/cli) (Optional, but recommended)
 
 ## Environment Variables
 
